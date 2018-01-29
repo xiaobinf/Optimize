@@ -1,0 +1,189 @@
+import numpy as np
+import random
+import math
+from operator import itemgetter
+
+# f(x) = x+10*sin(5*x)+7*cos(4*x), x∈[0,9]
+
+# population是population_size*chromosome_size的二维数组
+# 迭代次数generation_size
+generation_size=100
+gn=0
+population=np.zeros((900,10),int)
+upper_bound=9
+lower_bound=0
+fitness_value = [0] * np.shape(population)[0]  # 当前代适应度矩阵
+fitness_sum=[0]*900
+fitness_average=[0]*generation_size
+best_fitness=0
+best_generation=0
+best_individual=list()
+
+def fiwr():
+    global population
+    global fitness_value
+    with open('a.txt','a+') as f:
+        for line in population:
+            f.write(str(line)+'\n')
+        f.write(str(fitness_value))
+
+def init(population_size, chromosome_size):
+    '''
+    随机初始化种群
+    :param population_size:种群个体个数
+    :param chromosome_size: 种群个体的长度
+    :return: 返回种群二维数组
+    '''
+    global population
+    for i in range(0,population_size):
+        for j in range(0,chromosome_size):
+            population[i][j]=random.choice([0,1])
+    print('&&&*************************************************&&&&&&')
+    fiwr()
+
+def fitness(population_size, chromosome_size):
+    '''
+    计算适应度
+    :param population_size:
+    :param chromosome_size:
+    :return:
+    '''
+    global population
+    global fitness_value
+    for i in range(0,population_size):
+        fitness_value[i]=0
+    o=1
+
+    # def binListTostr(l):
+    #     s=''
+    #     for i in l:
+    #         s+=i
+    #     return s
+
+    for i in range(0,population_size):
+        for j in range(0,chromosome_size):
+            if population[i][j]==1:
+                # 个体的染色体序列排序，小端排序
+                fitness_value[i]=fitness_value[i]+pow(2,j) #将二进制转为十进制
+        # fitness_value[i] = lower_bound + fitness_value[i] * (upper_bound-lower_bound)/(pow(2,chromosome_size) - 1)  #将十进制投影到0-9区间
+        fitness_value[i]=0 + fitness_value[i]*(9 - 0) / (pow(2,10) - 1)
+        fitness_value[i] = fitness_value[i] + 10 * np.sin(5 * fitness_value[i]) + 7 * np.cos(4 * fitness_value[i]); #计算自变量xi的适应度函数值
+        # print(o,'函数值：',fitness_value[i])
+
+
+    ### 打印population
+    for i in range(0,population_size):
+        print(o,'population[{}]'.format(i),str(population[i]))
+        print(o,'fitness_value[{}]'.format(i),fitness_value[i])
+        o+=1
+
+def binListToDec(binList):
+    '''
+    将一个二进制列表转为十进制整数
+    :param binList:
+    :return:
+    '''
+    dec=0
+    for i in range(0,len(binList)):
+        if binList[i]==1:
+            dec=dec+pow(2,i)
+    return dec
+
+def rank(population_size, chromosome_size):
+    '''
+    对个体按适应度大小进行排序，并且保存最佳个体
+    :param population_size:
+    :param chromosome_size:
+    :return:
+    '''
+    global fitness_sum
+    global population
+    global best_fitness
+    global best_generation
+    global best_individual
+    # 初始化fitness_sum的值
+    for i in range(0,population_size):
+        fitness_sum[i]=0
+
+    for i in range(0,population_size):
+        # 冒泡排序
+        min_index=i
+        for j in range(i+1,population_size):
+            if fitness_value[j]<fitness_value[i]:
+                # 交换
+                fitness_value[i], fitness_value[j] = fitness_value[j], fitness_value[i]
+                for k in range(0,chromosome_size):
+                    population[i][k],population[j][k]=population[j][k],population[i][k]
+
+
+                # swap  交换fitness_value的值 population的值  交换population[i] population[min_index]的染色体串
+        # if min_index!=i:
+            # 发生了交换
+            # fitness_value[i],fitness_value[min_index]=fitness_value[min_index],fitness_value[i]
+
+            # for k in range(0,chromosome_size):
+            #     population[i][k],population[min_index][k]=population[min_index][k],population[i][k]
+
+    # fitness_sum(i) = 前i个个体的适应度之和
+    for i in range(0,population_size):
+        if i==1:
+            fitness_sum[i]=fitness_sum[i]+fitness_value[i]
+        else:
+            fitness_sum[i]=fitness_sum[i-1]+fitness_value[i]
+     # 第gn次迭代个体的平均适应度
+    fitness_average[gn]=fitness_sum[population_size-1]/population_size
+    if fitness_value[population_size-1]>best_fitness:
+        best_fitness=fitness_value[population_size-1]
+        best_generation=gn
+        # for j in range(0,chromosome_size):
+        best_individual=population[population_size-1]
+
+
+
+
+
+def genetic_algorithm(population_size, chromosome_size, generation_size, cross_rate, mutate_rate, elitism):
+    '''
+    # Genetic Algorithm for Functional Maximum Problem
+    :param population_size:输入种群大小
+    :param chromosome_size: 输入染色体长度
+    :param generation_size: 输入迭代次数
+    :param cross_rate: 输入交叉概率
+    :param mutate_rate: 输入变异概率
+    :param elitism: 是否是精英选择
+    :return:(m,n,p,q)
+    m:输出最佳个体
+    n:输出最佳适应度
+    p:输出最佳个体出现的迭代次数
+    q:输出最佳个体自变量
+    '''
+    gn=0                # 当前迭代次数
+    global fitness_value    # 当前代适应度矩阵
+    best_fitness=0;    # 历代最佳适应值
+    best_individual=0; # 历代最佳个体
+    best_generation=0; # 最佳个体出现代
+    upper_bound = 9;        # 自变量的区间上限
+    lower_bound = 0;        # 自变量的区间下限
+
+    # 构建迭代次数×1的零矩阵
+    fitness_average=np.zeros((generation_size,1),int)
+    init(population_size,chromosome_size)
+
+    for gn in range(0,generation_size):
+        fitness(population_size, chromosome_size)                   # 计算适应度
+        rank(population_size, chromosome_size)                      # 对个体按适应度大小进行排序
+        # selection(population_size, chromosome_size, elitism)        # 选择操作
+        # crossover(population_size, chromosome_size, cross_rate)     # 交叉操作
+        # mutation(population_size, chromosome_size, mutate_rate)     # 变异操作
+
+    # plotGA(generation_size)             # 打印算法迭代过程
+
+    m = best_individual                 # 获得最佳个体
+    n = best_fitness                    # 获得最佳适应度
+    p = best_generation                 # 获得最佳个体出现时的迭代次数
+
+    fiwr()
+    return m,n,p
+
+
+print(genetic_algorithm(900,10,100,0,0,0))
