@@ -2,6 +2,7 @@ import numpy as np
 import random
 import math
 from operator import itemgetter
+import matplotlib.pyplot as plt
 
 # f(x) = x+10*sin(5*x)+7*cos(4*x), x∈[0,9]
 
@@ -10,6 +11,7 @@ from operator import itemgetter
 generation_size=100
 gn=0
 population=np.zeros((900,10),int)
+population_new=np.zeros((900,10),int)
 upper_bound=9
 lower_bound=0
 fitness_value = [0] * np.shape(population)[0]  # 当前代适应度矩阵
@@ -101,6 +103,7 @@ def rank(population_size, chromosome_size):
     global best_fitness
     global best_generation
     global best_individual
+    global gn
     # 初始化fitness_sum的值
     for i in range(0,population_size):
         fitness_sum[i]=0
@@ -137,9 +140,98 @@ def rank(population_size, chromosome_size):
         best_generation=gn
         # for j in range(0,chromosome_size):
         best_individual=population[population_size-1]
+    gn+=1
 
+def selection(population_size, chromosome_size, elitism):
+    '''
+    遗传算法的选择操作  选一些适应度为正数的个体出来
+    :param population_size:种群大小
+    :param chromosome_size:个体染色体长度
+    :param elitism:是否精英选择
+    :return:
+    '''
+    global population
+    global population_new
+    global fitness_sum   #种群累积适应度
+    for i in range(0,population_size):
+        r=random.random()*fitness_sum[population_size-1]
+        first=0
+        last=population_size-1
+        mid=round((last+first)/2)
+        idx=-1
+        # 排中法选择个体
+        while first<last and idx==-1:
+            if r > fitness_sum[mid]:
+                first = mid
+            elif r < fitness_sum[mid]:
+                last = mid
+            else:
+                idx = mid
+                break
 
+            mid = round((last + first) / 2)
+            if (last - first) == 1:
+                idx = last
+                break
+        # 产生新个体
+        for j in range(0,chromosome_size):
+            population_new[i][j]=population[idx][j]
 
+    # 是否是精英选择
+    if elitism:
+        p=population_size-1
+    else:
+        p=population_size
+    #  如果精英选择，将population中前population_size-1个个体更新，最后一个最优个体保留
+    for i in range(0,p):
+        for j in range(0,chromosome_size):
+            population[i][j]=population_new[i][j]
+
+def crossover(population_size, chromosome_size, cross_rate):
+    '''
+    相邻个体的交叉操作
+    :param population_size:
+    :param chromosome_size:
+    :param cross_rate:
+    :return:
+    '''
+    global population
+    for i in range(0,population_size,2):
+        if random.random()<cross_rate:
+            cross_position=round(random.random()*chromosome_size)
+            if cross_position==chromosome_size or cross_position==0:
+                # 数组越界 完全交换没有意义
+                continue
+            for j in range(cross_position,chromosome_size):
+                population[i][j],population[i+1][j]=population[i+1][j],population[i][j]
+
+def mutation(population_size, chromosome_size, mutate_rate):
+    '''
+    变异操作  单点变异
+    :param population_size:
+    :param chromosome_size:
+    :param mutate_rate:
+    :return:
+    '''
+    global population
+    for i in range(0,population_size):
+        if random.random()<mutate_rate:
+            mutate_position=round(random.random()*chromosome_size)
+            if mutate_position==chromosome_size:
+                # 越界 不变异
+                continue
+            population[i][mutate_position]=1-population[i][mutate_position]
+
+def plotGA(generation_size):
+    '''
+    绘制平均适应度
+    :param generation_size:
+    :return:
+    '''
+    X=list(range(generation_size))
+    Y=fitness_average
+    plt.plot(X,Y)
+    plt.show()
 
 
 def genetic_algorithm(population_size, chromosome_size, generation_size, cross_rate, mutate_rate, elitism):
@@ -166,24 +258,28 @@ def genetic_algorithm(population_size, chromosome_size, generation_size, cross_r
     lower_bound = 0;        # 自变量的区间下限
 
     # 构建迭代次数×1的零矩阵
-    fitness_average=np.zeros((generation_size,1),int)
+    global fitness_average
     init(population_size,chromosome_size)
 
     for gn in range(0,generation_size):
         fitness(population_size, chromosome_size)                   # 计算适应度
         rank(population_size, chromosome_size)                      # 对个体按适应度大小进行排序
-        # selection(population_size, chromosome_size, elitism)        # 选择操作
-        # crossover(population_size, chromosome_size, cross_rate)     # 交叉操作
-        # mutation(population_size, chromosome_size, mutate_rate)     # 变异操作
+        selection(population_size, chromosome_size, elitism)        # 选择操作
+        crossover(population_size, chromosome_size, cross_rate)     # 交叉操作
+        mutation(population_size, chromosome_size, mutate_rate)     # 变异操作
 
-    # plotGA(generation_size)             # 打印算法迭代过程
+    plotGA(generation_size)             # 打印算法迭代过程
+    # print(str(fitness_average))
 
     m = best_individual                 # 获得最佳个体
     n = best_fitness                    # 获得最佳适应度
     p = best_generation                 # 获得最佳个体出现时的迭代次数
 
-    fiwr()
+    # fiwr()
+
+    print('fitness_sum:',str(fitness_sum))
+    print('fitness_average:', str(fitness_average))
     return m,n,p
 
 
-print(genetic_algorithm(900,10,100,0,0,0))
+print(genetic_algorithm(900,10,100,0.6,0.01,True))
