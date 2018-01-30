@@ -1,7 +1,5 @@
 import numpy as np
 import random
-import math
-from operator import itemgetter
 import matplotlib.pyplot as plt
 
 # f(x) = x+10*sin(5*x)+7*cos(4*x), x∈[0,9]
@@ -14,20 +12,21 @@ population=np.zeros((900,10),int)
 population_new=np.zeros((900,10),int)
 upper_bound=9
 lower_bound=0
-fitness_value = [0] * np.shape(population)[0]  # 当前代适应度矩阵
+fitness_value = [0] * np.shape(population)[0]
 fitness_sum=[0]*900
 fitness_average=[0]*generation_size
 best_fitness=0
 best_generation=0
 best_individual=list()
 
-def fiwr():
-    global population
-    global fitness_value
-    with open('a.txt','a+') as f:
-        for line in population:
-            f.write(str(line)+'\n')
-        f.write(str(fitness_value))
+# 该函数调试时使用
+# def fiwr():
+#     global population
+#     global fitness_value
+#     with open('a.txt','a+') as f:
+#         for line in population:
+#             f.write(str(line)+'\n')
+#         f.write(str(fitness_value))
 
 def init(population_size, chromosome_size):
     '''
@@ -40,8 +39,6 @@ def init(population_size, chromosome_size):
     for i in range(0,population_size):
         for j in range(0,chromosome_size):
             population[i][j]=random.choice([0,1])
-    print('&&&*************************************************&&&&&&')
-    fiwr()
 
 def fitness(population_size, chromosome_size):
     '''
@@ -52,44 +49,40 @@ def fitness(population_size, chromosome_size):
     '''
     global population
     global fitness_value
+    global lower_bound
+    global upper_bound
     for i in range(0,population_size):
         fitness_value[i]=0
-    o=1
+    # o=1
 
-    # def binListTostr(l):
-    #     s=''
-    #     for i in l:
-    #         s+=i
-    #     return s
 
     for i in range(0,population_size):
         for j in range(0,chromosome_size):
             if population[i][j]==1:
                 # 个体的染色体序列排序，小端排序
                 fitness_value[i]=fitness_value[i]+pow(2,j) #将二进制转为十进制
-        # fitness_value[i] = lower_bound + fitness_value[i] * (upper_bound-lower_bound)/(pow(2,chromosome_size) - 1)  #将十进制投影到0-9区间
-        fitness_value[i]=0 + fitness_value[i]*(9 - 0) / (pow(2,10) - 1)
+        fitness_value[i] = lower_bound + fitness_value[i] * (upper_bound-lower_bound)/(pow(2,chromosome_size) - 1)  #将十进制投影到0-9区间
+        # fitness_value[i]=0 + fitness_value[i]*(9 - 0) / (pow(2,10) - 1)
         fitness_value[i] = fitness_value[i] + 10 * np.sin(5 * fitness_value[i]) + 7 * np.cos(4 * fitness_value[i]); #计算自变量xi的适应度函数值
-        # print(o,'函数值：',fitness_value[i])
 
 
-    ### 打印population
-    for i in range(0,population_size):
-        print(o,'population[{}]'.format(i),str(population[i]))
-        print(o,'fitness_value[{}]'.format(i),fitness_value[i])
-        o+=1
+    # # 打印population
+    # for i in range(0,population_size):
+    #     print(o,'population[{}]'.format(i),str(population[i]))
+    #     print(o,'fitness_value[{}]'.format(i),fitness_value[i])
+    #     o+=1
 
-def binListToDec(binList):
-    '''
-    将一个二进制列表转为十进制整数
-    :param binList:
-    :return:
-    '''
-    dec=0
-    for i in range(0,len(binList)):
-        if binList[i]==1:
-            dec=dec+pow(2,i)
-    return dec
+# def binListToDec(binList):
+#     '''
+#     将一个二进制列表转为十进制整数
+#     :param binList:
+#     :return:
+#     '''
+#     dec=0
+#     for i in range(0,len(binList)):
+#         if binList[i]==1:
+#             dec=dec+pow(2,i)
+#     return dec
 
 def rank(population_size, chromosome_size):
     '''
@@ -118,15 +111,6 @@ def rank(population_size, chromosome_size):
                 for k in range(0,chromosome_size):
                     population[i][k],population[j][k]=population[j][k],population[i][k]
 
-
-                # swap  交换fitness_value的值 population的值  交换population[i] population[min_index]的染色体串
-        # if min_index!=i:
-            # 发生了交换
-            # fitness_value[i],fitness_value[min_index]=fitness_value[min_index],fitness_value[i]
-
-            # for k in range(0,chromosome_size):
-            #     population[i][k],population[min_index][k]=population[min_index][k],population[i][k]
-
     # fitness_sum(i) = 前i个个体的适应度之和
     for i in range(0,population_size):
         if i==1:
@@ -135,10 +119,12 @@ def rank(population_size, chromosome_size):
             fitness_sum[i]=fitness_sum[i-1]+fitness_value[i]
      # 第gn次迭代个体的平均适应度
     fitness_average[gn]=fitness_sum[population_size-1]/population_size
+
     if fitness_value[population_size-1]>best_fitness:
+        # 当数据比较小时，很多时候前几次迭代就已经找到了个体最优解，不断的迭代只是将种群整体的平均解向最优解靠近
         best_fitness=fitness_value[population_size-1]
-        best_generation=gn
-        # for j in range(0,chromosome_size):
+        best_generation = gn
+        print(best_generation,gn)
         best_individual=population[population_size-1]
     gn+=1
 
@@ -224,7 +210,7 @@ def mutation(population_size, chromosome_size, mutate_rate):
 
 def plotGA(generation_size):
     '''
-    绘制平均适应度
+    绘制平均适应度迭代过程
     :param generation_size:
     :return:
     '''
@@ -247,35 +233,32 @@ def genetic_algorithm(population_size, chromosome_size, generation_size, cross_r
     m:输出最佳个体
     n:输出最佳适应度
     p:输出最佳个体出现的迭代次数
-    q:输出最佳个体自变量
     '''
-    gn=0                # 当前迭代次数
+    global gn               # 当前迭代次数
     global fitness_value    # 当前代适应度矩阵
-    best_fitness=0;    # 历代最佳适应值
-    best_individual=0; # 历代最佳个体
-    best_generation=0; # 最佳个体出现代
-    upper_bound = 9;        # 自变量的区间上限
-    lower_bound = 0;        # 自变量的区间下限
+    global best_fitness     # 历代最佳适应值
+    global best_individual  # 历代最佳个体
+    global best_generation  # 最佳个体出现代
+    global upper_bound      # 自变量的区间上限
+    global lower_bound       # 自变量的区间下限
+    global fitness_average  # 构建迭代次数×1的零矩阵
 
-    # 构建迭代次数×1的零矩阵
-    global fitness_average
+    # 初始化种群
     init(population_size,chromosome_size)
 
-    for gn in range(0,generation_size):
+    for i in range(0,generation_size):
+        # 迭代gn次
         fitness(population_size, chromosome_size)                   # 计算适应度
         rank(population_size, chromosome_size)                      # 对个体按适应度大小进行排序
         selection(population_size, chromosome_size, elitism)        # 选择操作
         crossover(population_size, chromosome_size, cross_rate)     # 交叉操作
         mutation(population_size, chromosome_size, mutate_rate)     # 变异操作
 
-    plotGA(generation_size)             # 打印算法迭代过程
-    # print(str(fitness_average))
+    plotGA(generation_size)             # 打印最优适应度迭代过程
 
     m = best_individual                 # 获得最佳个体
     n = best_fitness                    # 获得最佳适应度
     p = best_generation                 # 获得最佳个体出现时的迭代次数
-
-    # fiwr()
 
     print('fitness_sum:',str(fitness_sum))
     print('fitness_average:', str(fitness_average))
